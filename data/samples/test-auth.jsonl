@@ -1,0 +1,2 @@
+{"event_id":"test-001","service":"portail-demo","event":{"category":"authentication","outcome":"failure"},"source":{"ip":"192.0.2.10"},"message":"Test fictif de connexion échouée"}
+
