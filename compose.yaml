@@ -22,7 +22,7 @@ services:
       ES_JAVA_OPTS: "-Xms1g -Xmx1g"
     mem_limit: 2g
     ports:
-      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:${SECURILOG_ES_PORT:-9200}:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     networks:
@@ -33,7 +33,7 @@ services:
     environment:
       ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
     ports:
-      - "127.0.0.1:5601:5601"
+      - "127.0.0.1:${SECURILOG_KIBANA_PORT:-5601}:5601"
     depends_on:
       - elasticsearch
     networks:
@@ -56,7 +56,7 @@ services:
     build:
       context: ./webapp
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${SECURILOG_WEB_PORT:-8000}:8000"
     volumes:
       - ingest:/ingest
     networks:
