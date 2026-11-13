@@ -1,4 +1,7 @@
 import json
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from uuid import uuid4
 
 from flask import Flask, jsonify, render_template_string, request
 
@@ -50,7 +53,11 @@ PREVIEW_PAGE = """
         <label for="fichier">Fichier de logs</label>
         <input id="fichier" name="fichier" type="file" accept=".jsonl" required>
         <button type="submit">Prévisualiser</button>
+        <button type="submit" name="action" value="importer">Importer</button>
     </form>
+    {% if fichier_depose %}
+        <p role="status">Fichier déposé pour Logstash — {{ fichier_depose }}</p>
+    {% endif %}
 
     {% if erreur %}
         <p role="alert">{{ erreur }}</p>
@@ -67,7 +74,25 @@ PREVIEW_PAGE = """
 </body>
 </html>
 """
+def deposer_fichier_ingest(fichier):
+    dossier = Path("/ingest")
+    nom = f"import-{uuid4().hex}.jsonl"
 
+    fichier.stream.seek(0)
+    with NamedTemporaryFile(dir=dossier, suffix=".tmp", delete=False) as temporaire:
+        chemin_temporaire = Path(temporaire.name)
+        try:
+            for ligne in fichier.stream:
+                if ligne.strip():
+                    temporaire.write(ligne.rstrip(b"\r\n") + b"\n")
+
+            temporaire.close()
+            chemin_temporaire.chmod(0o644)
+            chemin_temporaire.rename(dossier / nom)
+        finally:
+            chemin_temporaire.unlink(missing_ok=True)
+
+    return nom
 
 @app.get("/")
 def accueil():
@@ -118,13 +143,22 @@ def preview():
                 PREVIEW_PAGE, erreur=f"La ligne {numero} doit contenir un objet JSON."
             ), 400
 
-        lignes.append(json.dumps(evenement, ensure_ascii=False, indent=2))
-        if len(lignes) == 10:
-            break
+        if len(lignes) < 10:
+            lignes.append(json.dumps(evenement, ensure_ascii=False, indent=2))
 
     if not lignes:
         return render_template_string(
             PREVIEW_PAGE, erreur="Le fichier ne contient aucun événement."
         ), 400
+    if request.form.get("action") == "importer":
+        try:
+            nom = deposer_fichier_ingest(fichier)
+        except OSError:
+            app.logger.exception("Impossible de déposer le fichier dans /ingest")
+            return render_template_string(
+                PREVIEW_PAGE, erreur="Le fichier n’a pas pu être déposé pour Logstash."
+            ), 500
+
+        return render_template_string(PREVIEW_PAGE, fichier_depose=nom), 202
 
     return render_template_string(PREVIEW_PAGE, lignes=lignes)
