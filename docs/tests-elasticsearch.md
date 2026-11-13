@@ -77,3 +77,34 @@ Extrait de la réponse observée (`aggregations.resultats_connexion.buckets`) :
 ```
 
 La requête a trouvé **25 documents d’authentification**. Les trois fragments interrogés ont répondu sans erreur. Les compteurs portent sur les documents indexés.
+
+## 4. Vérifier l’import JSONL depuis la WebApp — Semaine 3
+
+Le 13 novembre 2026, la WebApp a affiché les 10 premiers événements en aperçu.
+Après l’import, Elasticsearch a retrouvé les 11 documents du fichier déposé pour Logstash.
+
+```bash
+curl -fsS --max-time 10 'http://127.0.0.1:9200/securilog-test-*/_count?pretty' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": {
+      "match_phrase": {
+        "log.file.path": "/ingest/import-15a65f34193f40c7bdb6bd4d1d2dc796.jsonl"
+      }
+    }
+  }'
+```
+
+Réponse observée
+
+```json
+{
+  "count": 11,
+  "_shards": {
+    "total": 4,
+    "successful": 4,
+    "skipped": 0,
+    "failed": 0
+  }
+}
+```
