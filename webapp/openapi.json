@@ -1,0 +1,114 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SecuriLog",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Afficher les informations de SecuriLog",
+        "responses": {
+          "200": {
+            "description": "Informations de l’application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["application", "message"],
+                  "properties": {
+                    "application": {"type": "string", "example": "SecuriLog"},
+                    "message": {"type": "string", "example": "Application Flask opérationnelle"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Vérifier que la WebApp répond",
+        "responses": {
+          "200": {
+            "description": "WebApp disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["status"],
+                  "properties": {
+                    "status": {"type": "string", "example": "ok"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/preview": {
+      "get": {
+        "summary": "Afficher le formulaire web",
+        "responses": {
+          "200": {"$ref": "#/components/responses/PageHtml"}
+        }
+      },
+      "post": {
+        "summary": "Prévisualiser ou importer un fichier JSONL",
+        "description": "La requête multipart est limitée à 2 Mio, en-têtes des champs compris. Sans action, la page affiche jusqu’à 10 événements. L’action importer dépose un fichier dans le volume lu par Logstash. L’indexation dans Elasticsearch se vérifie ensuite séparément.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["fichier"],
+                "properties": {
+                  "fichier": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Fichier .jsonl encodé en UTF-8, avec un objet JSON par ligne."
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": ["importer"],
+                    "description": "Laisser ce champ vide pour afficher l’aperçu."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"$ref": "#/components/responses/PageHtml"},
+          "202": {
+            "description": "Fichier déposé pour Logstash",
+            "content": {"text/html": {"schema": {"type": "string"}}}
+          },
+          "400": {
+            "description": "Fichier absent, vide ou invalide",
+            "content": {"text/html": {"schema": {"type": "string"}}}
+          },
+          "413": {
+            "description": "Requête trop volumineuse",
+            "content": {"text/html": {"schema": {"type": "string"}}}
+          },
+          "500": {
+            "description": "Erreur lors du dépôt pour Logstash",
+            "content": {"text/html": {"schema": {"type": "string"}}}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "PageHtml": {
+        "description": "Page HTML du formulaire ou de l’aperçu",
+        "content": {"text/html": {"schema": {"type": "string"}}}
+      }
+    }
+  }
+}
